@@ -28,12 +28,16 @@ export default {
   mounted () {
     // We can't access the rendering context until the canvas is mounted to the DOM.
     // Once we have it, provide it to all child components.
-    this.provider.context = this.$refs['my-canvas'].getContext('2d')
+    this.provider.context = this.$refs['my-canvas'].getContext('2d');
+    
+    let image = new Image();
+    image.src = 'assets/tiles.png';
+    this.provider.image = image;
 
     // Resize the canvas to fit its parent's width.
     // Normally you'd use a more flexible resize system.
-    this.$refs['my-canvas'].width = this.$refs['my-canvas'].parentElement.clientWidth
-    this.$refs['my-canvas'].height = this.$refs['my-canvas'].parentElement.clientHeight
+    this.$refs['my-canvas'].width = this.$refs['my-canvas'].parentElement.clientWidth;
+    this.$refs['my-canvas'].height = this.$refs['my-canvas'].parentElement.clientHeight;
   }
 }
 </script>
