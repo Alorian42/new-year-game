@@ -13,7 +13,8 @@ export default {
       // so child components will update when `context` changes.
       provider: {
         // This is the CanvasRenderingContext that children will draw to.
-        context: null
+        context: null,
+        rerenderTiles: function() {},
       }
     }
   },

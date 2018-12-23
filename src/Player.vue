@@ -4,15 +4,21 @@ export default {
   inject: ['provider'],
 
   props: {
-    frame: {
+    // Start coordinates (percentage of canvas dimensions).
+    x: {
       type: Number,
       default: 0
     },
 
-    wisps: {
-      type: Array,
-      default: []
-    }
+    y: {
+      type: Number,
+      default: 0
+    },
+
+    frame: {
+      type: Number,
+      default: 0
+    },
 
   },
 
@@ -40,15 +46,13 @@ export default {
     const tileH = 64;
     const canvW = 64;
     const canvH = 64;
-    const sX = 0;
+    const sX = 64;
     const sY = 64;
 
-    this.wisps.forEach(element => {
-      let x = element.x;
-      let y = element.y;
+    let x = this.x;
+    let y = this.y;
 
-      ctx.drawImage(image, sX, sY, tileW, tileH, x, y, canvW, canvH);
-    });
+    ctx.drawImage(image, sX, sY, tileW, tileH, x, y, canvW, canvH);
   }
 }
 </script>

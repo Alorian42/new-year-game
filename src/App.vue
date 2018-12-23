@@ -1,15 +1,37 @@
 <template>
   <div id="app" @keyup.37="move('left')" @keyup.39="move('right')">
-    <my-canvas style="width: 100%; height: 100%;">
+    <div v-if="!isAlive">
+      <input type="text" v-model="nickname">
+      <button @click="startGame">Start Game</button>
+      <button @click="loadBoards">Leader Boards</button>
+      <ul>
+        <li v-for="leader in leaders" v-bind:key="leader.id">{{ leader.name }} : {{ leader.score }}</li>
+      </ul>
+    </div>
+    <div v-if="isAlive">
+      Life: {{ lifes }}
+      Score: {{ score }}
+    </div>
+    <my-canvas style="width: 100%; height: 100%;" v-if="isAlive">
       <tile
         :map="map"
+        :frame="frame"
       >
       </tile>
       <wisp
-        :x="playerX"
-        :y="playerY"
+        :frame="frame"
+        :wisps="wisps"
       >
       </wisp>
+      <player
+        :frame="frame"
+        :x="playerX"
+        :y="playerY">
+      </player>
+      <projectiles
+        :frame="frame"
+        :projectiles="projectiles">
+      </projectiles>
     </my-canvas>
   </div>
 </template>
@@ -18,61 +40,255 @@
 import MyCanvas from './MyCanvas.vue';
 import Tile from './Tile.vue';
 import Wisp from './Wisp.vue';
+import Player from './Player.vue';
+import Projectiles from './Projectiles.vue';
 
 export default {
   name: 'app',
   components: {
     MyCanvas,
     Tile,
-    Wisp
+    Wisp,
+    Player,
+    Projectiles
   },
 
   data () {
     return {
-      playerX: 100,
-      playerY: 200
+      leaders: [],
+      nickname: 'Player',
+      lifes: 30,
+      score: 0,
+      isAlive: false,
+      playerX: 250,
+      playerY: 650,
+      playerSpeed: 15,
+      frame: 0,
+      map: [
+            [1,1,1,1,1,1,1,1,1,],
+            [1,1,1,1,1,1,1,1,1,],
+            [0,0,0,0,0,0,0,0,0,],
+            [0,0,0,0,0,0,0,0,0,],
+            [0,0,0,0,0,0,0,0,0,],
+            [0,0,0,0,0,0,0,0,0,],
+            [0,0,0,0,0,0,0,0,0,],
+            [0,0,0,0,0,0,0,0,0,],
+            [0,0,0,0,0,0,0,0,0,],
+            [2,2,2,2,2,2,2,2,2,],
+            [0,0,0,0,0,0,0,0,0,],
+            [0,0,0,0,0,0,0,0,0,],
+      ],
+      wisps: [],
+      wispId: 0,
+      maxAddSpeed: 1,
+      projectiles: [],
+      cooldown: 0,
+      projectileId: 0,
+      barricadeRange: 550,
+      playtime: 0,
     }
   },
 
   // Randomly selects a value to randomly increment or decrement every 16 ms.
   // Not really important, just demonstrates that reactivity still works.
   mounted () {
-    /*setInterval(function() {
-      this.playerX += 5;
-    }, 100);*/
+    document.addEventListener('keydown', (event) => {
+      const keyName = event.key;
+
+      if (keyName === 'ArrowLeft') {
+        event.preventDefault();
+        this.move('left');
+        return;
+      }
+      if (keyName === 'ArrowRight') {
+        event.preventDefault();
+        this.move('right');
+        return;
+      }
+      if (keyName === ' ') {
+        event.preventDefault();
+        this.shoot();
+        return;
+      }
+    });
+
+    setInterval(this.gameLoop, 16);
   },
   methods: {
-    move: function(dir) {
-      console.log(dir);
-      if (dir === 'left') {
-        this.playerX -= 5;
+    loadBoards: function() {
+      fetch('https://risens.team/risensteam/ny_game/leader.php?get_leaders')
+            .then((response) => {
+                if(response.ok) {
+                    return response.json();
+                }
+            
+                throw new Error('Network response was not ok');
+            })
+            .then((json) => {
+              json.forEach(element => {
+                this.leaders.push({
+                  id: element.id,
+                  name: element.name,
+                  score: element.score,
+                })
+              });
+            })
+            .catch((error) => {
+                console.log(error);
+            });
+    },
+    startGame: function() {
+      this.score = 0;
+      this.lifes = 30;
+      this.wisps = [];
+      this.projectiles = [];
+      this.wispId = 0;
+      this.projectileId = 0;
+      this.playerX = 250;
+      this.playerY = 650;
+      this.maxAddSpeed = 1;
+      this.cooldown = 0;
+      this.playtime = 0;
+      this.isAlive = true;
+    },
+    loseGame: function() {
+      this.isAlive = false;
+      fetch('https://risens.team/risensteam/ny_game/leader.php?new_leader_score=' + this.score + '&new_leader_name=' + this.nickname)
+            .then((response) => {
+                if(response.ok) {
+                    return response.json();
+                }
+            
+                throw new Error('Network response was not ok');
+            })
+            .then((json) => {
+              this.loadBoards();
+            })
+            .catch((error) => {
+                console.log(error);
+            });
+    },
+    gameLoop: function() {
+      if (this.isAlive) {
+        if (this.lifes <= 0) {
+          this.loseGame();
+          return;
+        }
+        this.projectileCycler();
+        this.wispCycler();
+        if (this.frame == 60) {
+          this.frame = 0;
+          this.playtime++;
+        }
+        if (this.cooldown !== 0) {
+          this.cooldown--;
+        }
+        if (this.playtime % 10 === 0) {
+          this.maxAddSpeed += Math.floor(Math.random() * 1);
+        }
+
+        this.frame++;
       }
-      else if (dir === 'right') {
-        this.playerX += 5;
+    },
+    wispCycler: function() {
+      if (this.frame == 60) {
+        this.wispSpawner();
+      }
+      this.wisps.forEach(element => {
+        element.y += element.speed;
+        
+        if (element.y >= this.barricadeRange) {
+          this.wispKiller(element.id);
+        }
+      });
+    },
+    wispSpawner: function() {
+      console.log('Wisp spawned id: ', this.wispId);
+      let y = 25;
+      let x = Math.floor(Math.random() * 500) + 10;
+      this.wisps.push({
+        id: this.wispId,
+        x: x,
+        y: y,
+        speed: Math.floor(Math.random() * 2) + this.maxAddSpeed,
+      });
+      this.wispId++;
+    },
+    wispKiller: function(id, byPlayer = false) {
+      console.log('Wisp killed id: ', id);
+      if (!byPlayer) {
+        this.lifes--;
+      }
+      else {
+        this.score += 5;
+      }
+      for(let i = 0; i < this.wisps.length; i++) {
+        if (this.wisps[i].id === id) {
+          this.wisps.splice(i, 1);
+          break;
+        }
+      }
+    },
+    move: function(dir) {
+      if (dir === 'left' && this.playerX - 5 >= 0 && this.isAlive) {
+        this.playerX -= this.playerSpeed;
+      }
+      else if (dir === 'right' && this.playerX + 5 <= 510 && this.isAlive) {
+        this.playerX += this.playerSpeed;
+      }
+    },
+    shoot: function() {
+      if (this.cooldown === 0 && this.isAlive) {
+        this.projectileSpawner();
+      }
+    },
+    projectileCycler: function() {
+      this.projectiles.forEach(element => {
+        element.y += element.speed;
+
+        if (element.y < 0) {
+          this.projectileKiller(element.id);
+        }
+
+        this.projectileCollisionWithWisps(element);
+      });
+    },
+    projectileSpawner: function() {
+      let y = this.playerY - 10;
+      let x = this.playerX;
+      this.projectiles.push({
+        id: this.projectileId,
+        x: x,
+        y: y,
+        speed: -10,
+      });
+      this.projectileId++;
+    },
+    projectileKiller: function(id) {
+      for(let i = 0; i < this.projectiles.length; i++) {
+        if (this.projectiles[i].id === id) {
+          this.projectiles.splice(i, 1);
+          break;
+        }
+      }
+    },
+    projectileCollisionWithWisps: function(projectile) {
+      for(let i = 0; i < this.wisps.length; i++) {
+        let wisp = this.wisps[i];
+
+        if (wisp.x - 32 < projectile.x && wisp.x + 32 > projectile.x) {
+          if (wisp.y - 32 < projectile.y && wisp.y + 32 > projectile.y) {
+            this.projectileKiller(projectile.id);
+            this.wispKiller(wisp.id, true);
+            return;
+          }
+        }
       }
     }
   },
 
   computed: {
-    map: function() {
-      const availTiles = [0, 1, 2];
-      const len = 18;
 
-      let arrays = [
-        [1,1,1,1,1,1,1,1,1,],
-        [1,1,1,1,1,1,1,1,1,],
-        [0,0,0,0,0,0,0,0,0,],
-        [0,0,0,0,0,0,0,0,0,],
-        [0,0,0,0,0,0,0,0,0,],
-        [0,0,0,0,0,0,0,0,0,],
-        [0,0,0,0,0,0,0,0,0,],
-        [2,2,2,2,2,2,2,2,2,],
-        [2,2,2,2,2,2,2,2,2,],
-        [0,0,0,0,0,0,0,0,0,],
-      ];
-      
-      return arrays;
-    }
   }
 }
 </script>

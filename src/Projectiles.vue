@@ -9,7 +9,7 @@ export default {
       default: 0
     },
 
-    wisps: {
+    projectiles: {
       type: Array,
       default: []
     }
@@ -40,10 +40,10 @@ export default {
     const tileH = 64;
     const canvW = 64;
     const canvH = 64;
-    const sX = 0;
+    const sX = 128;
     const sY = 64;
 
-    this.wisps.forEach(element => {
+    this.projectiles.forEach(element => {
       let x = element.x;
       let y = element.y;
 
