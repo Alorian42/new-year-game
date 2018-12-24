@@ -4,9 +4,9 @@
       <input type="text" v-model="nickname">
       <button @click="startGame">Start Game</button>
       <button @click="loadBoards">Leader Boards</button>
-      <ul>
+      <ol>
         <li v-for="leader in leaders" v-bind:key="leader.id">{{ leader.name }} : {{ leader.score }}</li>
-      </ul>
+      </ol>
     </div>
     <div v-if="isAlive">
       Life: {{ lifes }}
@@ -89,8 +89,6 @@ export default {
     }
   },
 
-  // Randomly selects a value to randomly increment or decrement every 16 ms.
-  // Not really important, just demonstrates that reactivity still works.
   mounted () {
     document.addEventListener('keydown', (event) => {
       const keyName = event.key;
@@ -125,6 +123,7 @@ export default {
                 throw new Error('Network response was not ok');
             })
             .then((json) => {
+              this.leaders = [];
               json.forEach(element => {
                 this.leaders.push({
                   id: element.id,
@@ -200,10 +199,16 @@ export default {
         if (element.y >= this.barricadeRange) {
           this.wispKiller(element.id);
         }
+
+        if (this.frame % 15 == 0) {
+        element.animationFrame++;
+          if (element.animationFrame === 4) {
+            element.animationFrame = 0;
+          }
+        }
       });
     },
     wispSpawner: function() {
-      console.log('Wisp spawned id: ', this.wispId);
       let y = 25;
       let x = Math.floor(Math.random() * 500) + 10;
       this.wisps.push({
@@ -211,16 +216,20 @@ export default {
         x: x,
         y: y,
         speed: Math.floor(Math.random() * 2) + this.maxAddSpeed,
+        animationFrame: Math.floor(Math.random() * 4),
       });
       this.wispId++;
     },
     wispKiller: function(id, byPlayer = false) {
-      console.log('Wisp killed id: ', id);
       if (!byPlayer) {
         this.lifes--;
+        let audio = new Audio('assets/explosion_2.mp3');
+        audio.play();
       }
       else {
         this.score += 5;
+        let audio = new Audio('assets/explosion.mp3');
+        audio.play();
       }
       for(let i = 0; i < this.wisps.length; i++) {
         if (this.wisps[i].id === id) {
@@ -239,6 +248,7 @@ export default {
     },
     shoot: function() {
       if (this.cooldown === 0 && this.isAlive) {
+        this.cooldown = 30;
         this.projectileSpawner();
       }
     },
@@ -246,14 +256,24 @@ export default {
       this.projectiles.forEach(element => {
         element.y += element.speed;
 
+        if (this.frame % 15 == 0) {
+        element.animationFrame++;
+          if (element.animationFrame === 4) {
+            element.animationFrame = 0;
+          }
+        }
+
         if (element.y < 0) {
           this.projectileKiller(element.id);
         }
-
-        this.projectileCollisionWithWisps(element);
+        else {
+          this.projectileCollisionWithWisps(element);
+        }
       });
     },
     projectileSpawner: function() {
+      let audio = new Audio('assets/fireball.mp3');
+      audio.play();
       let y = this.playerY - 10;
       let x = this.playerX;
       this.projectiles.push({
@@ -261,6 +281,7 @@ export default {
         x: x,
         y: y,
         speed: -10,
+        animationFrame: 0,
       });
       this.projectileId++;
     },

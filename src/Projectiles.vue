@@ -41,13 +41,13 @@ export default {
     const canvW = 64;
     const canvH = 64;
     const sX = 128;
-    const sY = 64;
+    const sY = [64, 128, 192, 256];
 
     this.projectiles.forEach(element => {
       let x = element.x;
       let y = element.y;
 
-      ctx.drawImage(image, sX, sY, tileW, tileH, x, y, canvW, canvH);
+      ctx.drawImage(image, sX, sY[element.animationFrame], tileW, tileH, x, y, canvW, canvH);
     });
   }
 }
