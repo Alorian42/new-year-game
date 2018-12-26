@@ -86,6 +86,7 @@ export default {
       projectileId: 0,
       barricadeRange: 550,
       playtime: 0,
+      justStarted: true,
     }
   },
 
@@ -149,6 +150,7 @@ export default {
       this.cooldown = 0;
       this.playtime = 0;
       this.isAlive = true;
+      this.justStarted = true;
     },
     loseGame: function() {
       this.isAlive = false;
@@ -182,11 +184,12 @@ export default {
         if (this.cooldown !== 0) {
           this.cooldown--;
         }
-        if (this.playtime % 10 === 0) {
-          this.maxAddSpeed += Math.floor(Math.random() * 1);
+        if (this.playtime % 10 === 0 && this.frame === 0 && !this.justStarted) {
+          this.maxAddSpeed += Math.floor(Math.random() * 2);
         }
 
         this.frame++;
+        this.justStarted = false;
       }
     },
     wispCycler: function() {
