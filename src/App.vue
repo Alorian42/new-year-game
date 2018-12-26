@@ -12,7 +12,7 @@
       Life: {{ lifes }}
       Score: {{ score }}
     </div>
-    <my-canvas style="width: 100%; height: 100%;" v-if="isAlive">
+    <my-canvas style="width: 100%; height: 100%;" v-if="isAlive" ref="canvas-comp">
       <tile
         :map="map"
         :frame="frame"
@@ -111,9 +111,21 @@ export default {
       }
     });
 
+    document.addEventListener('mousemove', (event) => {
+      let x = event.clientX;
+      let y = event.clientY;
+      
+      if (x <= 540 && y <= 710 && this.isAlive) {
+        this.moveByMouse(x, y);
+      }
+    });
+
     setInterval(this.gameLoop, 16);
   },
   methods: {
+    moveByMouse(x, y) {
+      this.playerX = x - 30;
+    },
     loadBoards: function() {
       fetch('https://risens.team/risensteam/ny_game/leader.php?get_leaders')
             .then((response) => {
