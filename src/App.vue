@@ -120,6 +120,15 @@ export default {
       }
     });
 
+    document.addEventListener('click', (event) => {
+      let x = event.clientX;
+      let y = event.clientY;
+
+      if (x <= 540 && y <= 710 && y > 21 && this.isAlive) {
+        this.shoot();
+      }
+    });
+
     setInterval(this.gameLoop, 16);
   },
   methods: {
